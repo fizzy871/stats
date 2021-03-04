@@ -14,7 +14,7 @@ import ModuleKit
 import StatsKit
 
 internal class Popup: NSView, Popup_p {
-    private let diskFullHeight: CGFloat = 62
+    private let diskFullHeight: CGFloat = 157
     private var list: [String: DiskView] = [:]
     
     public var sizeCallback: ((NSSize) -> Void)? = nil
@@ -67,22 +67,27 @@ internal class DiskView: NSView {
     
     private let nameAndBarHeight: CGFloat = 36
     private let legendHeight: CGFloat = 16
+    private let chartHeight: CGFloat = 90
     
     private var nameAndBarView: DiskNameAndBarView
     private var legendView: DiskLegendView
+    private var chartView: ChartView
     
     public init(_ frame: NSRect, name: String, size: Int64, free: Int64, path: URL?) {
         self.nameAndBarView = DiskNameAndBarView(
-            NSRect(x: 5, y: self.legendHeight + 5, width: frame.width - 10, height: self.nameAndBarHeight),
+            NSRect(x: 5, y: self.chartHeight + self.legendHeight + 10, width: frame.width - 10, height: self.nameAndBarHeight),
             name: name,
             size: size,
             free: free,
             path: path
         )
         self.legendView = DiskLegendView(
-            NSRect(x: 5, y: 5, width: frame.width - 10, height: self.legendHeight),
+            NSRect(x: 5, y: self.chartHeight + 10, width: frame.width - 10, height: self.legendHeight),
             size: size,
             free: free
+        )
+        self.chartView = ChartView(
+            NSRect(x: 5, y: 5, width: frame.width - 10, height: self.chartHeight)
         )
         
         super.init(frame: frame)
@@ -92,6 +97,7 @@ internal class DiskView: NSView {
         
         self.addSubview(self.nameAndBarView)
         self.addSubview(self.legendView)
+        self.addSubview(self.chartView)
     }
     
     required init?(coder: NSCoder) {
@@ -105,6 +111,40 @@ internal class DiskView: NSView {
     public func update(free: Int64, read: Int64?, write: Int64?) {
         self.nameAndBarView.update(free: free, read: read, write: write)
         self.legendView.update(free: free)
+        self.chartView.update(upload: Double(read ?? 0), download: Double(write ?? 0))
+    }
+}
+
+internal class ChartView: NSView {
+    internal var chart: NetworkChartView? = nil
+    
+    public init(_ frame: NSRect) {
+        super.init(frame: frame)
+        self.addChart()
+    }
+    
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    override func updateLayer() {
+        self.chart?.display()
+    }
+    
+    internal func update(upload: Double, download: Double) {
+        self.chart?.addValue(upload: upload, download: download)
+    }
+    
+    private func addChart() {
+        let chart = NetworkChartView(frame: NSRect(
+            x: 0,
+            y: 1,
+            width: self.frame.width,
+            height: self.frame.height - 2
+        ), num: 120)
+        chart.base = .byte
+        self.addSubview(chart)
+        self.chart = chart
     }
 }
 
